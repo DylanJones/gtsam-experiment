@@ -49,7 +49,7 @@ def main():
 
             # Make up a noise model based on reported tag error
             # (this is a pretty bad way to do it, but it's a start)
-            err_scale = 2e5
+            err_scale = 1e5
             det_noise = gtsam.noiseModel.Diagonal.Sigmas(np.array([det.pose_err * err_scale] * 3))
             print(det.pose_err * err_scale)
             # Add the factor

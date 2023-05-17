@@ -22,10 +22,14 @@ def main():
     tag_sym = [gtsam.symbol('l', i) for i in range(4)]
     initial_guesses = gtsam.Values()
     for i in range(len(tag_sym)):
-        initial_guesses.insert(tag_sym[i], gtsam.Point3(0, 0, 0))
+        pos = gtsam.Point3(0, 1 if i in (1, 2) else 0, 1 if i in (2, 3) else 0)
+        initial_guesses.insert(tag_sym[i], pos)
         # Also add a large initial prior for each tag's position
-        large_prior_noise = gtsam.noiseModel.Diagonal.Sigmas(np.array([100] * 3))
-        graph.addPriorPoint3(tag_sym[i], gtsam.Point3(0, 0, 0), large_prior_noise)
+        large_prior_noise = gtsam.noiseModel.Diagonal.Sigmas(np.array([.01] * 3))
+        graph.addPriorPoint3(tag_sym[i], pos, large_prior_noise)
+
+    # First camera position is at 0,0,0
+    # graph.addPriorPose3(gtsam.symbol('x', 0), gtsam.Pose3(), gtsam.noiseModel.Diagonal.Sigmas(np.array([0] * 6)))
 
     pts = defaultdict(list)
 
@@ -40,7 +44,6 @@ def main():
         if len(detections) != 4:
             continue
 
-
         # Symbol for current camera pos
         cam_sym = gtsam.symbol('x', timestep_num)
 
@@ -53,11 +56,12 @@ def main():
 
             # Make up a noise model based on reported tag error
             # (this is a pretty bad way to do it, but it's a start)
-            err_scale = 1e3
+            err_scale = 1e4
             det_noise = gtsam.noiseModel.Diagonal.Sigmas(np.array([det.pose_err * err_scale] * 3))
             print(det.pose_err * err_scale)
             # Add BearingRangeFactor to graph
-            graph.add(gtsam.BearingRangeFactor3D(cam_sym, tag_sym[det.tag_id], gtsam.Unit3((det.pose_t / np.linalg.norm(det.pose_t)).flatten()),
+            graph.add(gtsam.BearingRangeFactor3D(cam_sym, tag_sym[det.tag_id],
+                                                 gtsam.Unit3((-det.pose_t / np.linalg.norm(det.pose_t)).flatten()),
                                                  np.linalg.norm(det.pose_t), det_noise))
 
             # draw tag detections
@@ -70,11 +74,13 @@ def main():
         cv2.waitKey(1)
         timestep_num += 1
 
-
     # Solve graph
     params = gtsam.LevenbergMarquardtParams()
     params.setVerbosityLM("SUMMARY")
     optimizer = gtsam.LevenbergMarquardtOptimizer(graph, initial_guesses, params)
+    # params = gtsam.GaussNewtonParams()
+    # params.setVerbosity("SUMMARY")
+    # optimizer = gtsam.GaussNewtonOptimizer(graph, initial_guesses, params)
     result = optimizer.optimize()
     marginals = gtsam.Marginals(graph, result)
 
@@ -99,9 +105,9 @@ def main():
     result_pts = np.array(result_pts)
     ax2.scatter(result_pts[:, 0], result_pts[:, 1])
     # error circles
-    # for i, pose in enumerate(result_pts):
-    #     confidence = np.sqrt(marginals.marginalCovariance(gtsam.symbol('x', i))[0, 0])
-    #     ax2.add_artist(plt.Circle(pose[:2], confidence, color='r', fill=False))
+    for i, pose in enumerate(result_pts):
+        confidence = np.sqrt(marginals.marginalCovariance(gtsam.symbol('x', i))[0, 0])
+        ax2.add_artist(plt.Circle(pose[:2], confidence, color='r', fill=False))
     # make axes same scale
     ax2.set_aspect('equal', adjustable='box')
 
@@ -115,7 +121,40 @@ def main():
     ax2 = fig.add_subplot(122)
     ax2.title.set_text("GTSAM landmarks")
     ax2.scatter(result_pts[:, 0], result_pts[:, 1])
+    # # error circles
+    # for i, pose in enumerate(result_pts):
+    #     confidence = np.sqrt(marginals.marginalCovariance(gtsam.symbol('x', i))[0, 0])
+    #     ax2.add_artist(plt.Circle(pose[:2], confidence, color='r', fill=False))
     ax2.set_aspect('equal', adjustable='box')
+
+    # Plot 3: compare second and third derivatives of mean pos vs. GTSAM pos
+    mean_vel = np.diff(mean_pts, axis=0)
+    gtsam_vel = np.diff(result_pts, axis=0)
+    fig = plt.figure()
+    ax = fig.add_subplot(221)
+    ax.title.set_text("mean d^2/dt^2")
+    mean_accel = np.diff(mean_vel, axis=0)
+    ax.plot(np.linalg.norm(mean_accel, axis=1))
+    ax2 = fig.add_subplot(222)
+    ax2.title.set_text("GTSAM d^2/dt^2")
+    gtsam_accel = np.diff(gtsam_vel, axis=0)
+    ax2.plot(np.linalg.norm(gtsam_accel, axis=1))
+    ax3 = fig.add_subplot(223)
+    ax3.title.set_text("mean d^3/dt^3")
+    mean_jerk = np.diff(mean_accel, axis=0)
+    ax3.plot(np.linalg.norm(mean_jerk, axis=1))
+    ax4 = fig.add_subplot(224)
+    ax4.title.set_text("GTSAM d^3/dt^3")
+    gtsam_jerk = np.diff(gtsam_accel, axis=0)
+    ax4.plot(np.linalg.norm(gtsam_jerk, axis=1))
+
+    print("mean average speed: ", np.mean(np.abs(mean_vel)))
+    print("GTSAM average speed: ", np.mean(np.abs(gtsam_vel)))
+    print("mean average absolute acceleration: ", np.mean(np.abs(mean_accel)))
+    print("GTSAM average absolute acceleration: ", np.mean(np.abs(gtsam_accel)))
+    print("mean average absolute jerk: ", np.mean(np.abs(mean_jerk)))
+    print("GTSAM average absolute jerk: ", np.mean(np.abs(gtsam_jerk)))
+
     plt.show()
 
 

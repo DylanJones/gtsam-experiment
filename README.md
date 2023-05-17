@@ -50,6 +50,24 @@ composed of variables and factors.  Variables are the unknowns in the system, an
 variables.  The goal is to find the most likely values for the variables given the constraints.  The variables are
 represented by nodes in the graph, and the factors are represented by edges. 
 
+### Metric
+The metric we decided to use for testing the smoothing power of our algorithms is the average absolute acceleration.  We
+chose this metric because it's simple to compute, and makes sense; noisy, jittery positional data will end up
+corresponding to a high acceleration, while smooth positional data will correspond to a low acceleration.  We compute
+it as follows:
+
+```math
+\[
+\Bar{v}=|\frac{1}{n}\sum_{i=1}^{n} x_i - x_{i-1}|
+\]
+```
+
+```math
+\[
+\Bar{a}=|\frac{1}{n}\sum_{i=1}^{n} v_i - v_{i-1}|
+\]
+```
+
 ## Approach, Implementation, and Results
 
 ### Implementation
