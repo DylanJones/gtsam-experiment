@@ -15,7 +15,6 @@ AprilTag alone.
 * [Flexible Layouts for Fiducial Tags](https://april.eecs.umich.edu/papers/details.php?name=krogius2019iros)
 * [Factor Graphs for Robot Perception](http://www.cs.cmu.edu/~kaess/pub/Dellaert17fnt.pdf)
 * [Factor Graphs and GTSAM: A Hands-on Introduction](https://repository.gatech.edu/entities/publication/0c2ac17c-1df4-48fe-8532-8f746868934a)
-*
 
 ## Theory, Metric Information, and Background
 
@@ -60,6 +59,8 @@ localization data than we could with a single AprilTag alone.  To do this, we en
 * `apriltag_baseline.py`: This is our baseline detector.  It doesn't use GTSAM at all, and just computes pose independently for each of the four visible tags.  It also plots the mean of the four camera positions.
 * `gtsam_basic_noise.py`: This is the first attempt at using GTSAM.  It still computes the camera pose independently for each of the four visible tags, but then uses GTSAM to combine the four poses into a single pose estimate.  It also propigates the reported noise from the AprilTag detections into the GTSAM graph.
 * `gtsam_landmark.py`: This is the final version of our program.  Instead of computing the camera pose directly from the tag detection, it instead creates 4 nodes in the graph for the tag positions, then uses the reported position and orientation of the tags relative to the camera to create a BearingRangeFactor3D between the camera and the tag.  It then uses GTSAM to estimate the camera pose and the tag positions simultaneously.
+
+![Graphs](pictures/diagram.png)
 
 ### Usage and Replication instructions
 The testing environment was set up by printing out AprilTags numbered 00-03, and placing them in a 1x1 meter square on a

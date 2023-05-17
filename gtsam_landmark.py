@@ -76,7 +76,7 @@ def main():
     params.setVerbosityLM("SUMMARY")
     optimizer = gtsam.LevenbergMarquardtOptimizer(graph, initial_guesses, params)
     result = optimizer.optimize()
-    # marginals = gtsam.Marginals(graph, result)
+    marginals = gtsam.Marginals(graph, result)
 
     # Plot 1: Compare raw data to GTSAM; plot in 2D,
     # with confidence circles
