@@ -1,0 +1,4 @@
+gtsam_build/
+apriltag/
+__pycache__/
+*.pyc

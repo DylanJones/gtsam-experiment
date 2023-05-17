@@ -1,0 +1,2 @@
+Apriltag dimensions: 19.2cm / side
+UW camera has an f-stop of 2.2
