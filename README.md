@@ -57,15 +57,11 @@ corresponding to a high acceleration, while smooth positional data will correspo
 it as follows:
 
 ```math
-\[
-\Bar{v}=|\frac{1}{n}\sum_{i=1}^{n} x_i - x_{i-1}|
-\]
+\bar{v}=|\frac{1}{n}\sum_{i=1}^{n} x_i - x_{i-1}|
 ```
 
 ```math
-\[
-\Bar{a}=|\frac{1}{n}\sum_{i=1}^{n} v_i - v_{i-1}|
-\]
+\bar{a}=|\frac{1}{n}\sum_{i=1}^{n} v_i - v_{i-1}|
 ```
 
 ## Approach, Implementation, and Results
