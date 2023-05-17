@@ -18,15 +18,8 @@ def main():
     detector = Detector(families='tagStandard41h12',
                         nthreads=16)
     graph = gtsam.NonlinearFactorGraph()
-    # Symbols for tags
-    tag_sym = [gtsam.symbol('l', i) for i in range(4)]
     initial_guesses = gtsam.Values()
-    for i in range(len(tag_sym)):
-        initial_guesses.insert(tag_sym[i], gtsam.Point3(0, 0, 0))
-        # Also add a large initial prior for each tag's position
-        large_prior_noise = gtsam.noiseModel.Diagonal.Sigmas(np.array([100] * 3))
-        graph.addPriorPoint3(tag_sym[i], gtsam.Point3(0, 0, 0), large_prior_noise)
-
+    tag_locations = {}
     pts = defaultdict(list)
 
     timestep_num = 0
@@ -40,31 +33,32 @@ def main():
         if len(detections) != 4:
             continue
 
-
-        # Symbol for current camera pos
+        # One variable for the current camera pos:
         cam_sym = gtsam.symbol('x', timestep_num)
-
-        # Add each detected tag's pose as a landmark factor to the graph:
+        # Add factors for each tag's position
         for det in detections:
             # Convert apriltag pose to camera pose
             camera_pose = det.pose_R.T @ -det.pose_t
             camera_pose = camera_pose.flatten()  # "world coordinates" of camera
+            if det.tag_id not in tag_locations:
+                tag_locations[det.tag_id] = camera_pose
+
+            camera_pose = camera_pose - tag_locations[det.tag_id]
             pts[det.tag_id].append(camera_pose)
+
 
             # Make up a noise model based on reported tag error
             # (this is a pretty bad way to do it, but it's a start)
-            err_scale = 1e3
+            err_scale = 2e5
             det_noise = gtsam.noiseModel.Diagonal.Sigmas(np.array([det.pose_err * err_scale] * 3))
             print(det.pose_err * err_scale)
-            # Add BearingRangeFactor to graph
-            graph.add(gtsam.BearingRangeFactor3D(cam_sym, tag_sym[det.tag_id], gtsam.Unit3((det.pose_t / np.linalg.norm(det.pose_t)).flatten()),
-                                                 np.linalg.norm(det.pose_t), det_noise))
-
+            # Add the factor
+            graph.add(gtsam.PriorFactorPoint3(cam_sym, gtsam.Point3(camera_pose), det_noise))
             # draw tag detections
             cv2.polylines(frame, [np.int32(det.corners)], True, (0, 255, 0), 2)
 
         # Add initial estimate for camera pose - just use the pose of the last tag
-        initial_guesses.insert(cam_sym, gtsam.Pose3(gtsam.Rot3(det.pose_R.T), camera_pose))
+        initial_guesses.insert(cam_sym, gtsam.Point3(camera_pose))
 
         cv2.imshow("frame", frame)
         cv2.waitKey(1)
@@ -76,7 +70,7 @@ def main():
     params.setVerbosityLM("SUMMARY")
     optimizer = gtsam.LevenbergMarquardtOptimizer(graph, initial_guesses, params)
     result = optimizer.optimize()
-    # marginals = gtsam.Marginals(graph, result)
+    marginals = gtsam.Marginals(graph, result)
 
     # Plot 1: Compare raw data to GTSAM; plot in 2D,
     # with confidence circles
@@ -92,16 +86,16 @@ def main():
     # make axes same scale
     ax.set_aspect('equal', adjustable='box')
     ax2 = fig.add_subplot(122)
-    ax2.title.set_text("GTSAM landmarks")
+    ax2.title.set_text("GTSAM, basic independent variables")
     result_pts = []
     for i in range(timestep_num - 1):
-        result_pts.append(result.atPose3(gtsam.symbol('x', i)).translation())
+        result_pts.append(result.atPoint3(gtsam.symbol('x', i)))
     result_pts = np.array(result_pts)
     ax2.scatter(result_pts[:, 0], result_pts[:, 1])
     # error circles
-    # for i, pose in enumerate(result_pts):
-    #     confidence = np.sqrt(marginals.marginalCovariance(gtsam.symbol('x', i))[0, 0])
-    #     ax2.add_artist(plt.Circle(pose[:2], confidence, color='r', fill=False))
+    for i, pose in enumerate(result_pts):
+        confidence = np.sqrt(marginals.marginalCovariance(gtsam.symbol('x', i))[0, 0])
+        ax2.add_artist(plt.Circle(pose[:2], confidence, color='r', fill=False))
     # make axes same scale
     ax2.set_aspect('equal', adjustable='box')
 
