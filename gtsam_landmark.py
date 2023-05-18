@@ -4,6 +4,7 @@ factors and having GTSAM solve for the camera position, instead of using dt_apri
 positional estimates to calculate our position.
 """
 import gtsam
+import gtsam.utils.plot as gtplot
 import numpy as np
 import json
 from matplotlib import pyplot as plt
@@ -46,6 +47,10 @@ def main():
 
         # Symbol for current camera pos
         cam_sym = gtsam.symbol('x', timestep_num)
+        # Prior to keep camera near previous position
+        if timestep_num > 0:
+            graph.add(gtsam.BetweenFactorPose3(cam_sym, gtsam.symbol('x', timestep_num - 1),
+                                               gtsam.Pose3(), gtsam.noiseModel.Diagonal.Sigmas(np.array([0.1] * 6))))
 
         # Add each detected tag's pose as a landmark factor to the graph:
         for det in detections:
@@ -104,10 +109,10 @@ def main():
         result_pts.append(result.atPose3(gtsam.symbol('x', i)).translation())
     result_pts = np.array(result_pts)
     ax2.scatter(result_pts[:, 0], result_pts[:, 1])
-    # error circles
+    # error ellipses
     for i, pose in enumerate(result_pts):
-        confidence = np.sqrt(marginals.marginalCovariance(gtsam.symbol('x', i))[0, 0])
-        ax2.add_artist(plt.Circle(pose[:2], confidence, color='r', fill=False))
+        gtplot.plot_covariance_ellipse_2d(ax2, pose[:2], marginals.marginalCovariance(gtsam.symbol('x', i))[:2, :2])
+
     # make axes same scale
     ax2.set_aspect('equal', adjustable='box')
 

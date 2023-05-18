@@ -72,7 +72,7 @@ localization data than we could with a single AprilTag alone.  To do this, we en
 
 * `apriltag_baseline.py`: This is our baseline detector.  It doesn't use GTSAM at all, and just computes pose independently for each of the four visible tags.  It also plots the mean of the four camera positions.
 * `gtsam_basic_noise.py`: This is the first attempt at using GTSAM.  It still computes the camera pose independently for each of the four visible tags, but then uses GTSAM to combine the four poses into a single pose estimate.  It also propigates the reported noise from the AprilTag detections into the GTSAM graph.
-* `gtsam_landmark.py`: This is the final version of our program.  Instead of computing the camera pose directly from the tag detection, it instead creates 4 nodes in the graph for the tag positions, then uses the reported position and orientation of the tags relative to the camera to create a BearingRangeFactor3D between the camera and the tag.  It then uses GTSAM to estimate the camera pose and the tag positions simultaneously.
+* `gtsam_landmark.py`: This is the final version of our program.  Instead of computing the camera pose directly from the tag detection, it instead creates 4 nodes in the graph for the tag positions, then uses the reported position and orientation of the tags relative to the camera to create a BearingRangeFactor3D between the camera and the tag.  It then uses GTSAM to estimate the camera pose for all points simultaneously.
 
 ![Graphs](pictures/diagram.png)
 
@@ -88,10 +88,10 @@ Measure the side length of the long side of the board in meters, then plug it in
 You'll then take a video of the chessboard with your camera and run the `calibrate_camera.py` script on it.  This gives
 you values for the camera intrinsics (fx, fy, cx, cy) which can be put into the `apriltag_baseline.py` script.
 
-Once you've calibrated your camera, the next step will be printing out and mounting the AprilTags.  They don't need
-to be mounted in a 1x1 meter square like we did; they just need to be in a fixed configuration relative to each other.
-You'll need to measure the side length of the tags in meters, and plug that into the `apriltag_baseline.py` script as 
-well.
+Once you've calibrated your camera, the next step will be printing out and mounting the AprilTags.  They should be mounted
+in as close to a 1x1 meter square as possible; we used a plumb line, meter stick, and level to make this easier. 
+You'll then need to measure the side length of the tags in meters, and plug that into the `apriltag_baseline.py` script
+as well.
 
 Once you've done all of the above setup, you should be ready to run the actual scripts!  Running `apriltag_baseline.py`
 will plot baseline results; `gtsam_basic_noise.py` will plot the results of the first GTSAM implementation, and
@@ -108,10 +108,12 @@ will plot baseline results; `gtsam_basic_noise.py` will plot the results of the 
 #### GTSAM Landmark
 ![GTSAM Landmark](pictures/gtsam_landmarks.png)
 
-Our results were mixed.  While GTSAM was able to help us reject outliers, it also didn't perform nearly as much smoothing
-as we got with a simple mean of the four tag positions.  This may be because we didn't set up our graph with enough
-factors; in both implementations, there was only one factor per tag per frame, and we computed the tag pose *before*
-feeding it to GTSAM.
+Our initial results are very promising.  As expected, the baseline results from the individual tags are very noisy.
+Taking the mean between the four visible tags actually works surprisingly well at smoothing out the data, but it doesn't
+take care of the outliers or take into account the error reported from the detector.  Our first attempt at using GTSAM
+to combine the data does a good job of smoothing out the data, but doesn't really perform any better than the baseline 
+tag mean.  Our final implementation, however, does a much better job.  It's able to smooth out the data, take into account
+the reported error, and also handle outliers.  
 
 Additionally, we didn't have enough time to implement the IMU factor, like we originally hoped to.  Due to unforeseen
 issues setting up the Raspberry Pi, we weren't able to get the IMU data in time to implement it.  We believe that this

@@ -4,6 +4,7 @@ factors and having GTSAM solve for the camera position, instead of using dt_apri
 positional estimates to calculate our position.
 """
 import gtsam
+import gtsam.utils.plot as gtplot
 import numpy as np
 import json
 from matplotlib import pyplot as plt
@@ -94,8 +95,7 @@ def main():
     ax2.scatter(result_pts[:, 0], result_pts[:, 1])
     # error circles
     for i, pose in enumerate(result_pts):
-        confidence = np.sqrt(marginals.marginalCovariance(gtsam.symbol('x', i))[0, 0])
-        ax2.add_artist(plt.Circle(pose[:2], confidence, color='r', fill=False))
+        gtplot.plot_covariance_ellipse_2d(ax2, pose[:2], marginals.marginalCovariance(gtsam.symbol('x', i))[:2, :2])
     # make axes same scale
     ax2.set_aspect('equal', adjustable='box')
 
