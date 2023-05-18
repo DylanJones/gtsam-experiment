@@ -15,7 +15,7 @@ from collections import defaultdict
 
 
 def main():
-    cap = cv2.VideoCapture("videos/tagtest_4tag_fig8.mp4")
+    cap = cv2.VideoCapture("videos/tagtest_4tag_manymotion.mp4")
     detector = Detector(families='tagStandard41h12',
                         nthreads=16)
     graph = gtsam.NonlinearFactorGraph()

@@ -115,6 +115,10 @@ to combine the data does a good job of smoothing out the data, but doesn't reall
 tag mean.  Our final implementation, however, does a much better job.  It's able to smooth out the data, take into account
 the reported error, and also handle outliers.  
 
+Metrics-wise, our final results were mixed.  On some videos, we find that our average absolute acceleration was lower
+than the baseline, indicating better performance with fewer outliers, while on others, we had a higher acceleration
+and thus more significant outliers.
+
 Additionally, we didn't have enough time to implement the IMU factor, like we originally hoped to.  Due to unforeseen
 issues setting up the Raspberry Pi, we weren't able to get the IMU data in time to implement it.  We believe that this
 could have a very significant impact on our results; we don't have any odometry data available, so the IMU might work
